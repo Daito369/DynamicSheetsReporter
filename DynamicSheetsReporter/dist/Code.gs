@@ -10,7 +10,6 @@
 
 // LoggingService: structured logging with trace IDs for GAS environment
 // Transpiled to .gs and executed in Apps Script.
-Object.defineProperty(exports, "__esModule", ({ value: true }));
 
 function randomId_() {
     const chars = '0123456789abcdef';
@@ -77,7 +76,6 @@ function withTrace(traceId) {
 // Core GAS entry points and user settings handlers
 // Note: Transpiled to .gs and executed in Apps Script environment (V8)
 // Local TypeScript build will not have GAS ambient types; define minimal shims to satisfy TS.
-Object.defineProperty(exports, "__esModule", ({ value: true }));
 
 
 

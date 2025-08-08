@@ -14,6 +14,11 @@ const OUT = path.join(ROOT, 'out');
 const DIST = path.join(ROOT, 'dist');
 const SRC = path.join(ROOT, 'src');
 
+// Matches CommonJS __esModule declarations such as
+// Object.defineProperty(exports, "__esModule", ({ value: true }));
+// The object literal may optionally be wrapped in parentheses.
+const ES_MODULE_REGEX = /^\s*Object\.defineProperty\(exports?,\s*["']__esModule["']\s*,\s*\(?\{\s*value:\s*true\s*\}\)?\);\s*$/gm;
+
 function ensureDir(p) {
   if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
 }
@@ -56,7 +61,7 @@ function copyServerJsAsGs() {
       .replace(/^\s*var\s+__webpack_exports__\s*=\s*\{\s*\};\s*$/m, '')
       .replace(/^\s*\/\/\s*This entry needs to be wrapped.*$/m, '')
       // remove any "Object.defineProperty(exports,__esModule...)" that might still linger
-      .replace(/^\s*Object\.defineProperty\(exports?,\s*["']__esModule["']\s*,\s*\{\s*value:\s*true\s*\}\);\s*$/gm, '');
+      .replace(ES_MODULE_REGEX, '');
 
     // 2) Strip TS 'export ' keywords (idempotent)
     transformed = transformed.replace(/\bexport\s+/g, '');
@@ -65,7 +70,7 @@ function copyServerJsAsGs() {
     //    Be aggressive: the line can appear with leading/trailing spaces or comments.
     transformed = transformed
       // kill Object.defineProperty(exports,"__esModule",...)
-      .replace(/^\s*Object\.defineProperty\(exports?,\s*["']__esModule["']\s*,\s*\{\s*value:\s*true\s*\}\);\s*$/gm, '')
+      .replace(ES_MODULE_REGEX, '')
       // kill any "exports.name = name;" style lines
       .replace(/^\s*exports\.[A-Za-z0-9_$]+\s*=\s*[A-Za-z0-9_$]+\s*;\s*$/gm, '')
       // kill "module.exports = ..."
