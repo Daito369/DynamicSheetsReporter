@@ -1,12 +1,5 @@
-/******/ 	"use strict";
-
-/*!**********************************!*\
-  !*** ./src/shared/validation.ts ***!
-  \**********************************/
-
 // 最小のバリデーションスタブ（将来拡張予定）
 // Apps Script 互換の単純関数群。TypeScriptで定義し .gs に変換されます。
-Object.defineProperty(exports, "__esModule", ({ value: true }));
 
 
 

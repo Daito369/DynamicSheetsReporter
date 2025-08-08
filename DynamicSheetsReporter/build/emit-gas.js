@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const fs = require('fs');
 const path = require('path');
+const ts = require('typescript');
 
 /**
  * Post-build emitter:
- * - Copies server JS from ../out to ../dist and renames .js -> .gs
+ * - Transpiles server TS sources to .gs for GAS
  * - Builds Index.html by injecting client bundle into src/client/index.html.tmpl
  * - Ensures dist structure exists
  */
@@ -14,88 +15,50 @@ const OUT = path.join(ROOT, 'out');
 const DIST = path.join(ROOT, 'dist');
 const SRC = path.join(ROOT, 'src');
 
+// Matches CommonJS __esModule declarations such as
+// Object.defineProperty(exports, "__esModule", ({ value: true }));
+// The object literal may optionally be wrapped in parentheses.
+const ES_MODULE_REGEX = /^\s*Object\.defineProperty\(exports?,\s*["']__esModule["']\s*,\s*\(?\{\s*value:\s*true\s*\}\)?\);\s*$/gm;
+
 function ensureDir(p) {
   if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
 }
 
-function listFiles(dir) {
-  if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir).map((name) => path.join(dir, name));
-}
-
 function copyServerJsAsGs() {
-  const serverEntries = ['Code.js', 'GeminiService.js', 'SheetsService.js', 'SharedTypes.js', 'Validation.js'];
+  // Transpile TS sources directly to .gs without bundling to avoid CommonJS artifacts
+  const entries = [
+    ['server/Code.ts', 'Code.gs'],
+    ['server/GeminiService.ts', 'GeminiService.gs'],
+    ['server/SheetsService.ts', 'SheetsService.gs'],
+    ['server/LoggingService.ts', 'LoggingService.gs'],
+    ['shared/types.ts', 'SharedTypes.gs'],
+    ['shared/validation.ts', 'Validation.gs'],
+  ];
   ensureDir(DIST);
-  serverEntries.forEach((file) => {
-    const from = path.join(OUT, file);
-    if (!fs.existsSync(from)) return;
-    const base = path.basename(file, '.js');
-    const to = path.join(DIST, base + '.gs');
-    const code = fs.readFileSync(from, 'utf8');
+  entries.forEach(([srcRel, outName]) => {
+    const srcPath = path.join(SRC, srcRel);
+    if (!fs.existsSync(srcPath)) return;
+    const tsCode = fs.readFileSync(srcPath, 'utf8');
+    const js = ts.transpileModule(tsCode, {
+      compilerOptions: { target: 'ES2019', module: ts.ModuleKind.CommonJS },
+    }).outputText;
 
-    // Phased cleanup to convert webpack+CommonJS output into plain GAS-safe script
-    let transformed = code;
+    let transformed = js
+      // strip "use strict" and __esModule declarations
+      .replace(/^\s*"use strict";\s*$/m, '')
+      .replace(ES_MODULE_REGEX, '')
+      // drop exports and module.exports lines
+      .replace(/^\s*exports\.[A-Za-z0-9_$]+\s*=\s*[^;]+;\s*$/gm, '')
+      .replace(/^\s*module\.exports\s*=\s*.*;?\s*$/gm, '')
+      // drop commonjs require statements
+      .replace(/^\s*const\s+[A-Za-z0-9_$]+\s*=\s*require\([^\)]+\);?\s*$/gm, '')
+      // LoggingService import: replace "X.withTrace" -> "withTrace"
+      .replace(/\b[A-Za-z0-9_$]+\.withTrace\b/g, 'withTrace')
+      .trim();
 
-    // 0) Remove webpackBootstrap IIFE wrapper lines and "use strict"
-    transformed = transformed
-      // remove the exact first line like "/******/ (() => { // webpackBootstrap"
-      .replace(/^\s*\/\*{2,}\/\s*\(\(\)\s*=>\s*\{\s*\/\/\s*webpackBootstrap\s*$/m, '')
-      // also handle when comment moves next line: "/******/  (() => { // webpackBootstrap"
-      .replace(/^\s*\/\*{2,}\/.*\n\s*\(\(\)\s*=>\s*\{\s*\/\/\s*webpackBootstrap\s*$/m, '')
-      // fallback: remove any sole "(()=>{" at BOF
-      .replace(/^\s*\(\(\)\s*=>\s*\{\s*$/m, '')
-      // remove top-level "use strict";
-      .replace(/^\s*["']use strict["'];\s*$/m, '')
-      // remove webpack banner block lines like /*! ... */
-      .replace(/^\s*\/\*!\s*.*\*\/\s*$/gm, '')
-      // remove trailing "})();"
-      .replace(/^\s*\}\)\(\);\s*$/m, '');
-
-    // 1) Remove webpack banners and meta lines
-    transformed = transformed
-      .replace(/^\s*var\s+__webpack_exports__\s*=\s*\{\s*\};\s*$/m, '')
-      .replace(/^\s*\/\/\s*This entry needs to be wrapped.*$/m, '')
-      // remove any "Object.defineProperty(exports,__esModule...)" that might still linger
-      .replace(/^\s*Object\.defineProperty\(exports?,\s*["']__esModule["']\s*,\s*\{\s*value:\s*true\s*\}\);\s*$/gm, '');
-
-    // 2) Strip TS 'export ' keywords (idempotent)
-    transformed = transformed.replace(/\bexport\s+/g, '');
-
-    // 3) Drop CommonJS boilerplate causing 'exports is not defined'
-    //    Be aggressive: the line can appear with leading/trailing spaces or comments.
-    transformed = transformed
-      // kill Object.defineProperty(exports,"__esModule",...)
-      .replace(/^\s*Object\.defineProperty\(exports?,\s*["']__esModule["']\s*,\s*\{\s*value:\s*true\s*\}\);\s*$/gm, '')
-      // kill any "exports.name = name;" style lines
-      .replace(/^\s*exports\.[A-Za-z0-9_$]+\s*=\s*[A-Za-z0-9_$]+\s*;\s*$/gm, '')
-      // kill "module.exports = ..."
-      .replace(/^\s*module\.exports\s*=\s*.*;?\s*$/gm, '');
-
-    // 4) Remove library var prelude and tail assignment produced by output.library
-    transformed = transformed.replace(new RegExp(`^\\s*var\\s+${base}\\s*;\\s*$`, 'm'), '');
-    transformed = transformed.replace(new RegExp(`\\n\\s*${base}\\s*=\\s*__webpack_exports__\\s*;[\\s\\S]*$`), '');
-
-    // 5) Defensive: remove any lingering single-line references to __webpack_exports__ / exports
-    transformed = transformed
-      .replace(/^\s*__webpack_exports__\s*=.*$/gm, '')
-      .replace(/^\s*var\s+exports\s*=\s*__webpack_exports__\s*;?\s*$/gm, '')
-      .replace(/^\s*exports\s*=.*$/gm, '');
-
-    // 6) Final sanitation: remove any leftover 'exports' or __webpack_exports__ occurrences on their own lines
-    transformed = transformed
-      .replace(/^\s*exports\b.*$/gm, (m) => (/^\s*exports\s*;?\s*$/.test(m) ? '' : m))
-      .replace(/^\s*__webpack_exports__\b.*$/gm, (m) => (/^\s*__webpack_exports__\s*;?\s*$/.test(m) ? '' : m));
-
-    // 7) Final sanity: if we stripped too much, fall back to original content
-    const candidate = (transformed || '').trim();
-    if (!candidate || candidate.split('\n').length < 2) {
-      transformed = code;
-    } else {
-      transformed = candidate + '\n';
-    }
-
-    fs.writeFileSync(to, transformed, 'utf8');
-    console.log(`[emit] ${from} -> ${to}`);
+    if (transformed) transformed += '\n';
+    fs.writeFileSync(path.join(DIST, outName), transformed, 'utf8');
+    console.log(`[emit] ${srcPath} -> ${path.join(DIST, outName)}`);
   });
 }
 

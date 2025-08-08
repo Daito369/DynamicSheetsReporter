@@ -1,15 +1,8 @@
-/******/ 	"use strict";
-
-/*!*************************************!*\
-  !*** ./src/server/GeminiService.ts ***!
-  \*************************************/
-
 // GeminiService: Google AI Studio v1beta generateContent 呼び出し（Apps Script UrlFetchApp）
 // 注意: ここは .gs に変換され、GAS 環境で実行されます。
 // - 認証は Authorization: Bearer <API_KEY>
 // - モデル: gemini-2.5-pro / gemini-2.5-flash / gemini-2.5-flash-lite
 // - 429/5xx は指数バックオフで再試行
-Object.defineProperty(exports, "__esModule", ({ value: true }));
 
 const PROP_NS = 'DSR';
 const PROP_API_KEY = `${PROP_NS}_GEMINI_API_KEY`;
