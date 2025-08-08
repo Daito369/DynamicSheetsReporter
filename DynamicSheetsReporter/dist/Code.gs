@@ -1,26 +1,127 @@
 /******/ 	"use strict";
+/******/ 	var __webpack_modules__ = ({
 
-/*!****************************!*\
-  !*** ./src/server/Code.ts ***!
-  \****************************/
+/***/ "./src/server/LoggingService.ts":
+/*!**************************************!*\
+  !*** ./src/server/LoggingService.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports) => {
 
-// GAS entry points and user settings handlers
-// Note: Transpiled to .gs and executed in Apps Script environment (V8)
-// Local TypeScript build will not have GAS ambient types; define minimal shims to satisfy TS.
+
+// LoggingService: structured logging with trace IDs for GAS environment
+// Transpiled to .gs and executed in Apps Script.
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+function randomId_() {
+    const chars = '0123456789abcdef';
+    let id = '';
+    for (let i = 0; i < 16; i++)
+        id += chars[Math.floor(Math.random() * chars.length)];
+    return id;
+}
+function log_(severity, traceId, message, data) {
+    const entry = {
+        severity,
+        traceId,
+        message,
+        timestamp: new Date().toISOString(),
+    };
+    if (data !== undefined)
+        entry.data = data;
+    console.log(JSON.stringify(entry));
+}
+function withTrace(traceId) {
+    const id = traceId || randomId_();
+    return {
+        traceId: id,
+        info: (message, data) => log_('INFO', id, message, data),
+        error: (message, data) => log_('ERROR', id, message, data),
+    };
+}
+
+
+/***/ }),
+
+/***/ "./src/server/controllers/AppController.ts":
+/*!*************************************************!*\
+  !*** ./src/server/controllers/AppController.ts ***!
+  \*************************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+
+// Controller serving the single-page app HTML
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+function doGet() {
+    const html = HtmlService.createHtmlOutputFromFile('Index')
+        .setTitle('Dynamic Sheets Reporter')
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    return html;
+}
+
+
+/***/ }),
+
+/***/ "./src/server/controllers/GeminiProxyController.ts":
+/*!*********************************************************!*\
+  !*** ./src/server/controllers/GeminiProxyController.ts ***!
+  \*********************************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+
+// Controller to proxy generateContent requests to GeminiService
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+function generateContentProxy(req) {
+    try {
+        return GeminiService.generateContent(req);
+    }
+    catch (e) {
+        return { ok: false, error: (e === null || e === void 0 ? void 0 : e.message) || String(e) };
+    }
+}
+
+
+/***/ }),
+
+/***/ "./src/server/controllers/PingController.ts":
+/*!**************************************************!*\
+  !*** ./src/server/controllers/PingController.ts ***!
+  \**************************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+// Simple ping endpoint with structured logging
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+const LoggingService_1 = __webpack_require__(/*! ../LoggingService */ "./src/server/LoggingService.ts");
+function ping() {
+    const logger = (0, LoggingService_1.withTrace)();
+    logger.info('ping');
+    return 'pong';
+}
+
+
+/***/ }),
+
+/***/ "./src/server/controllers/UserSettingsController.ts":
+/*!**********************************************************!*\
+  !*** ./src/server/controllers/UserSettingsController.ts ***!
+  \**********************************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+
+// User settings persistence via PropertiesService
+// Extracted from former Code.ts
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 
 
-
-
-
-/* ============================================================= */
-// Constants
 const PROP_NS = 'DSR';
 const PROP_API_KEY = `${PROP_NS}_GEMINI_API_KEY`;
 const PROP_MODEL = `${PROP_NS}_MODEL`;
 const PROP_LOCALE = `${PROP_NS}_LOCALE`;
 const PROP_TZ = `${PROP_NS}_TIMEZONE`;
-function maskKey(key) {
+function maskKey_(key) {
     if (!key)
         return '';
     const last4 = key.slice(-4);
@@ -39,19 +140,12 @@ function getSettings_() {
     const locale = getOrDefault_(props.getProperty(PROP_LOCALE), 'ja-JP');
     const timezone = getOrDefault_(props.getProperty(PROP_TZ), 'Asia/Tokyo');
     return {
-        apiKeyMasked: rawKey ? maskKey(rawKey) : '',
+        apiKeyMasked: rawKey ? maskKey_(rawKey) : '',
         hasApiKey: !!rawKey,
         model,
         locale,
         timezone,
     };
-}
-function doGet() {
-    // Serve SPA HTML from dist/Index.html
-    const html = HtmlService.createHtmlOutputFromFile('Index')
-        .setTitle('Dynamic Sheets Reporter')
-        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-    return html;
 }
 function getUserSettings() {
     return getSettings_();
@@ -75,15 +169,66 @@ function saveUserSettings(req) {
         return { ok: false, error: `Failed to save settings: ${(e === null || e === void 0 ? void 0 : e.message) || e}` };
     }
 }
-// Minimal ping to verify backend reachable
+
+
+/***/ })
+
+/******/ 	});
+/************************************************************************/
+/******/ 	// The module cache
+/******/ 	var __webpack_module_cache__ = {};
+/******/ 	
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/ 		// Check if module is in cache
+/******/ 		var cachedModule = __webpack_module_cache__[moduleId];
+/******/ 		if (cachedModule !== undefined) {
+/******/ 			return cachedModule.exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = __webpack_module_cache__[moduleId] = {
+/******/ 			// no module.id needed
+/******/ 			// no module.loaded needed
+/******/ 			exports: {}
+/******/ 		};
+/******/ 	
+/******/ 		// Execute the module function
+/******/ 		__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
+/******/ 	
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/ 	
+/************************************************************************/
+
+/*!****************************!*\
+  !*** ./src/server/main.ts ***!
+  \****************************/
+
+// Entry point exporting GAS-accessible functions
+// Transpiled to Code.gs via webpack/emit
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+
+
+
+
+const UserSettingsController_1 = __webpack_require__(/*! ./controllers/UserSettingsController */ "./src/server/controllers/UserSettingsController.ts");
+const PingController_1 = __webpack_require__(/*! ./controllers/PingController */ "./src/server/controllers/PingController.ts");
+const GeminiProxyController_1 = __webpack_require__(/*! ./controllers/GeminiProxyController */ "./src/server/controllers/GeminiProxyController.ts");
+const AppController_1 = __webpack_require__(/*! ./controllers/AppController */ "./src/server/controllers/AppController.ts");
+function getUserSettings() {
+    return (0, UserSettingsController_1.getUserSettings)();
+}
+function saveUserSettings(req) {
+    return (0, UserSettingsController_1.saveUserSettings)(req);
+}
 function ping() {
-    return 'pong';
+    return (0, PingController_1.ping)();
 }
 function generateContentProxy(req) {
-    try {
-        return GeminiService.generateContent(req);
-    }
-    catch (e) {
-        return { ok: false, error: (e === null || e === void 0 ? void 0 : e.message) || String(e) };
-    }
+    return (0, GeminiProxyController_1.generateContentProxy)(req);
+}
+function doGet() {
+    return (0, AppController_1.doGet)();
 }

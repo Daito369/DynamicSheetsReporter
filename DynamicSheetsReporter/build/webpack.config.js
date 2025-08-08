@@ -48,7 +48,7 @@ module.exports = [
     name: 'server',
     mode: 'development',
     entry: {
-      Code: path.resolve(__dirname, '../src/server/Code.ts'),
+      Code: path.resolve(__dirname, '../src/server/main.ts'),
       GeminiService: path.resolve(__dirname, '../src/server/GeminiService.ts'),
       SheetsService: path.resolve(__dirname, '../src/server/SheetsService.ts'),
       SharedTypes: path.resolve(__dirname, '../src/shared/types.ts'),

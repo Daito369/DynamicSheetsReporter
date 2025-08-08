@@ -1,11 +1,14 @@
-// GAS entry points and user settings handlers
-// Note: Transpiled to .gs and executed in Apps Script environment (V8)
-// Local TypeScript build will not have GAS ambient types; define minimal shims to satisfy TS.
+// User settings persistence via PropertiesService
+// Extracted from former Code.ts
 
-import { GeminiModel, SaveUserSettingsRequest, SaveUserSettingsResult, UserSettings } from '../shared/types';
+import {
+  GeminiModel,
+  SaveUserSettingsRequest,
+  SaveUserSettingsResult,
+  UserSettings,
+} from '../../shared/types';
 
-/* ===== Minimal GAS type/value shims for local TS compile ===== */
-// These shims are erased at runtime in Apps Script because actual globals exist there.
+/* ===== GAS shims ===== */
 declare const PropertiesService: {
   getUserProperties(): {
     getProperty(key: string): string | null;
@@ -13,15 +16,7 @@ declare const PropertiesService: {
   };
 };
 
-declare const HtmlService: {
-  createHtmlOutputFromFile(name: string): any;
-  XFrameOptionsMode: { ALLOWALL: any };
-};
-
 declare namespace GoogleAppsScript {
-  namespace HTML {
-    type HtmlOutput = any;
-  }
   namespace Properties {
     type Properties = {
       getProperty(key: string): string | null;
@@ -29,16 +24,14 @@ declare namespace GoogleAppsScript {
     };
   }
 }
-/* ============================================================= */
 
-// Constants
 const PROP_NS = 'DSR';
 const PROP_API_KEY = `${PROP_NS}_GEMINI_API_KEY`;
 const PROP_MODEL = `${PROP_NS}_MODEL`;
 const PROP_LOCALE = `${PROP_NS}_LOCALE`;
 const PROP_TZ = `${PROP_NS}_TIMEZONE`;
 
-function maskKey(key: string): string {
+function maskKey_(key: string): string {
   if (!key) return '';
   const last4 = key.slice(-4);
   return `****${last4}`;
@@ -59,7 +52,7 @@ function getSettings_(): UserSettings {
   const locale = getOrDefault_(props.getProperty(PROP_LOCALE), 'ja-JP');
   const timezone = getOrDefault_(props.getProperty(PROP_TZ), 'Asia/Tokyo');
   return {
-    apiKeyMasked: rawKey ? maskKey(rawKey) : '',
+    apiKeyMasked: rawKey ? maskKey_(rawKey) : '',
     hasApiKey: !!rawKey,
     model,
     locale,
@@ -67,19 +60,13 @@ function getSettings_(): UserSettings {
   };
 }
 
-export function doGet(): GoogleAppsScript.HTML.HtmlOutput {
-  // Serve SPA HTML from dist/Index.html
-  const html = HtmlService.createHtmlOutputFromFile('Index')
-    .setTitle('Dynamic Sheets Reporter')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  return html;
-}
-
 export function getUserSettings(): UserSettings {
   return getSettings_();
 }
 
-export function saveUserSettings(req: SaveUserSettingsRequest): SaveUserSettingsResult {
+export function saveUserSettings(
+  req: SaveUserSettingsRequest,
+): SaveUserSettingsResult {
   try {
     const props = getUserProps_();
     if (req.apiKeyPlain && req.apiKeyPlain.trim().length > 0) {
@@ -96,23 +83,3 @@ export function saveUserSettings(req: SaveUserSettingsRequest): SaveUserSettings
   }
 }
 
-// Minimal ping to verify backend reachable
-export function ping(): string {
-  return 'pong';
-}
-
-/**
- * Proxy to call GeminiService.generateContent from client.
- * Keep the request/response types aligned with shared/types.
- */
-declare const GeminiService: {
-  generateContent: (req: any) => any;
-};
-
-export function generateContentProxy(req: any): any {
-  try {
-    return (GeminiService as any).generateContent(req);
-  } catch (e: any) {
-    return { ok: false, error: e?.message || String(e) };
-  }
-}
