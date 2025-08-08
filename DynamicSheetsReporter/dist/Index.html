@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Dynamic Sheets Reporter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root { color-scheme: light dark; }
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo", sans-serif; margin: 0; padding: 0; }
+      header { padding: 12px 16px; border-bottom: 1px solid #ddd; }
+      main { padding: 16px; }
+      .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+      label { font-size: 12px; color: #666; display: block; margin-bottom: 4px; }
+      input, select, button { padding: 8px 10px; font-size: 14px; }
+      .card { border: 1px solid #ddd; border-radius: 8px; padding: 12px; margin: 12px 0; }
+      .muted { color: #777; font-size: 12px; }
+      .ok { color: #0a7; }
+      .warn { color: #a70; }
+      .error { color: #c00; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1 style="margin:0;font-size:18px;">Dynamic Sheets Reporter</h1>
+      <div class="muted">初期スキャフォールド（設定保存・ping 動作確認）</div>
+    </header>
+    <main>
+      <section class="card">
+        <h2 style="margin:0 0 8px 0;font-size:16px;">ユーザー設定</h2>
+        <div class="row">
+          <div>
+            <label>Gemini API Key</label>
+            <input id="apiKey" type="password" placeholder="***" />
+            <div id="apiKeyMasked" class="muted"></div>
+          </div>
+          <div>
+            <label>Model</label>
+            <select id="model">
+              <option value="gemini-2.5-pro">gemini-2.5-pro</option>
+              <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+              <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option>
+            </select>
+          </div>
+          <div>
+            <label>Locale</label>
+            <input id="locale" type="text" value="ja-JP" />
+          </div>
+          <div>
+            <label>Timezone</label>
+            <input id="tz" type="text" value="Asia/Tokyo" />
+          </div>
+          <div>
+            <button id="saveBtn">保存</button>
+          </div>
+        </div>
+        <div id="saveStatus" class="muted" style="margin-top:8px;"></div>
+      </section>
+
+      <section class="card">
+        <h2 style="margin:0 0 8px 0;font-size:16px;">接続テスト</h2>
+        <div class="row">
+          <button id="pingBtn">ping</button>
+          <div id="pingResult" class="mono"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 style="margin:0 0 8px 0;font-size:16px;">Gemini 最小テスト</h2>
+        <div class="row">
+          <input id="gemPrompt" type="text" placeholder="メッセージを入力" style="min-width:240px;" />
+          <button id="gemBtn">送信</button>
+          <div id="gemResult" class="mono" style="flex:1;min-height:1.5em;"></div>
+        </div>
+        <div class="muted" style="margin-top:6px;">ユーザー設定の API Key / Model を使用して Apps Script 側から Google AI Studio v1beta を呼び出します。</div>
+      </section>
+    </main>
+
+    <script>
+var ClientBundle;
+/******/ (() => { // webpackBootstrap
+/******/ 	"use strict";
+var __webpack_exports__ = {};
+/*!****************************!*\
+  !*** ./src/client/main.ts ***!
+  \****************************/
+
+// Client bootstrap: Promise wrapper for google.script.run and simple UI wiring
+function run(funcName, ...args) {
+    return new Promise((resolve, reject) => {
+        // eslint-disable-next-line no-undef
+        google.script.run
+            .withSuccessHandler((res) => resolve(res))
+            .withFailureHandler((err) => reject(err))[funcName](...args);
+    });
+}
+function byId(id) {
+    const el = document.getElementById(id);
+    if (!el)
+        throw new Error(`element not found: ${id}`);
+    return el;
+}
+async function init() {
+    const apiKeyInput = byId('apiKey');
+    const apiKeyMasked = byId('apiKeyMasked');
+    const modelSel = byId('model');
+    const localeInput = byId('locale');
+    const tzInput = byId('tz');
+    const saveBtn = byId('saveBtn');
+    const saveStatus = byId('saveStatus');
+    const pingBtn = byId('pingBtn');
+    const pingResult = byId('pingResult');
+    // Gemini minimal test UI
+    let gemBtn = null;
+    let gemPrompt = null;
+    let gemResult = null;
+    try {
+        gemBtn = byId('gemBtn');
+        gemPrompt = byId('gemPrompt');
+        gemResult = byId('gemResult');
+    }
+    catch (_) {
+        // optional section not present
+    }
+    // load current settings
+    try {
+        const settings = await run('getUserSettings');
+        apiKeyMasked.textContent = settings.hasApiKey ? `保存済み: ${settings.apiKeyMasked}` : '未保存';
+        modelSel.value = settings.model;
+        localeInput.value = settings.locale || 'ja-JP';
+        tzInput.value = settings.timezone || 'Asia/Tokyo';
+    }
+    catch (e) {
+        saveStatus.textContent = `設定の取得に失敗しました: ${e}`;
+        saveStatus.className = 'error';
+    }
+    saveBtn.addEventListener('click', async () => {
+        try {
+            saveBtn.disabled = true;
+            saveStatus.textContent = '保存中...';
+            const req = {
+                model: modelSel.value,
+                locale: localeInput.value,
+                timezone: tzInput.value,
+            };
+            if (apiKeyInput.value && apiKeyInput.value.trim().length > 0) {
+                req.apiKeyPlain = apiKeyInput.value.trim();
+            }
+            const res = await run('saveUserSettings', req);
+            if (res.ok) {
+                saveStatus.textContent = '保存しました';
+                saveStatus.className = 'ok';
+                const st = res.settings;
+                apiKeyMasked.textContent = st.hasApiKey ? `保存済み: ${st.apiKeyMasked}` : '未保存';
+                apiKeyInput.value = '';
+            }
+            else {
+                saveStatus.textContent = `保存に失敗: ${res.error}`;
+                saveStatus.className = 'error';
+            }
+        }
+        catch (e) {
+            saveStatus.textContent = `保存中にエラー: ${e}`;
+            saveStatus.className = 'error';
+        }
+        finally {
+            saveBtn.disabled = false;
+        }
+    });
+    if (gemBtn && gemPrompt && gemResult) {
+        gemBtn.addEventListener('click', async () => {
+            const prompt = gemPrompt.value || 'こんにちは';
+            gemResult.textContent = '生成中...';
+            gemResult.className = 'mono';
+            try {
+                const req = {
+                    model: byId('model').value || 'gemini-2.5-flash',
+                    contents: [
+                        { role: 'user', parts: [{ text: prompt }] }
+                    ]
+                };
+                const res = await run('generateContentProxy', req);
+                if (res.ok) {
+                    gemResult.textContent = res.text || '(empty)';
+                    gemResult.className = 'ok mono';
+                }
+                else {
+                    gemResult.textContent = `error: ${res.error}`;
+                    gemResult.className = 'error mono';
+                }
+            }
+            catch (e) {
+                gemResult.textContent = `error: ${e}`;
+                gemResult.className = 'error mono';
+            }
+        });
+    }
+    pingBtn.addEventListener('click', async () => {
+        pingResult.textContent = 'ping...';
+        try {
+            const res = await run('ping');
+            pingResult.textContent = res;
+            pingResult.className = 'ok mono';
+        }
+        catch (e) {
+            pingResult.textContent = `error: ${e}`;
+            pingResult.className = 'error mono';
+        }
+    });
+}
+document.addEventListener('DOMContentLoaded', init);
+
+ClientBundle = __webpack_exports__;
+/******/ })()
+;
+//# sourceMappingURL=client.js.map
+</script>
+  </body>
+</html>

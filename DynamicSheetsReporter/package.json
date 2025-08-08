@@ -1,0 +1,23 @@
+{
+  "name": "dynamic-sheets-reporter",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Dynamic Sheets Reporter - GAS + Webpack/TypeScript build (dist -> .gs/.html)",
+  "scripts": {
+    "clean": "rimraf project/DynamicSheetsReporter/out project/DynamicSheetsReporter/dist || true",
+    "build:webpack": "webpack --config build/webpack.config.js",
+    "build:emit": "node build/emit-gas.js",
+    "build": "npm run build:webpack && npm run build:emit",
+    "dev": "npm run build -- --watch",
+    "push": "clasp push -P . --force",
+    "open": "clasp open -P project/DynamicSheetsReporter"
+  },
+  "devDependencies": {
+    "@google/clasp": "^3.0.6-alpha",
+    "rimraf": "^5.0.5",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.5.4",
+    "webpack": "^5.93.0",
+    "webpack-cli": "^5.1.4"
+  }
+}
