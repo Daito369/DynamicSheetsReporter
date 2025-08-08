@@ -1,38 +1,6 @@
-// Client bootstrap: Promise wrapper for google.script.run and simple UI wiring
+// Client bootstrap and simple UI wiring
 
-type GAS = typeof google.script;
-
-declare const google: {
-  script: {
-    run: any;
-  };
-};
-
-function run<T>(funcName: string, ...args: any[]): Promise<T> {
-  return new Promise((resolve, reject) => {
-    // eslint-disable-next-line no-undef
-    (google.script.run as any)
-      .withSuccessHandler((res: T) => resolve(res))
-      .withFailureHandler((err: any) => reject(err))[funcName](...args);
-  });
-}
-
-type GeminiModel = 'gemini-2.5-pro' | 'gemini-2.5-flash' | 'gemini-2.5-flash-lite';
-
-interface UserSettings {
-  apiKeyMasked: string;
-  hasApiKey: boolean;
-  model: GeminiModel;
-  locale: string;
-  timezone: string;
-}
-
-interface SaveUserSettingsRequest {
-  apiKeyPlain?: string;
-  model: GeminiModel;
-  locale?: string;
-  timezone?: string;
-}
+import { ApiClient, UserSettings, SaveUserSettingsRequest, GeminiModel } from './services/ApiClient';
 
 function byId<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);
@@ -66,7 +34,7 @@ async function init() {
 
   // load current settings
   try {
-    const settings = await run<UserSettings>('getUserSettings');
+    const settings = await ApiClient.getUserSettings();
     apiKeyMasked.textContent = settings.hasApiKey ? `保存済み: ${settings.apiKeyMasked}` : '未保存';
     modelSel.value = settings.model;
     localeInput.value = settings.locale || 'ja-JP';
@@ -88,7 +56,7 @@ async function init() {
       if (apiKeyInput.value && apiKeyInput.value.trim().length > 0) {
         req.apiKeyPlain = apiKeyInput.value.trim();
       }
-      const res = await run<{ ok: boolean; settings?: UserSettings; error?: string }>('saveUserSettings', req);
+      const res = await ApiClient.saveUserSettings(req);
       if (res.ok) {
         saveStatus.textContent = '保存しました';
         saveStatus.className = 'ok';
@@ -119,9 +87,10 @@ async function init() {
             { role: 'user', parts: [{ text: prompt }] }
           ]
         };
-        const res = await run<{ ok: boolean; text?: string; error?: string }>('generateContentProxy', req);
+        const res = await ApiClient.generateContent(req);
         if (res.ok) {
-          gemResult!.textContent = res.text || '(empty)';
+          const txt = (res.data as any)?.candidates?.[0]?.content?.parts?.[0]?.text || '(empty)';
+          gemResult!.textContent = txt;
           gemResult!.className = 'ok mono';
         } else {
           gemResult!.textContent = `error: ${res.error}`;
@@ -137,7 +106,7 @@ async function init() {
   pingBtn.addEventListener('click', async () => {
     pingResult.textContent = 'ping...';
     try {
-      const res = await run<string>('ping');
+      const res = await ApiClient.ping();
       pingResult.textContent = res;
       pingResult.className = 'ok mono';
     } catch (e) {

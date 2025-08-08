@@ -20,7 +20,7 @@
 - 目的: 最小 API と SPA 骨格の確立
 - タスク
   - [x] /src/server: main.ts, controllers/*, services/*, utils/*, common/*
-  - [ ] /src/client: AppShell, ルータ無し単一ページ、API クライアント（[`src/client/services/ApiClient.ts`](src/client/services/ApiClient.ts)）
+  - [x] /src/client: AppShell, ルータ無し単一ページ、API クライアント（[`src/client/services/ApiClient.ts`](src/client/services/ApiClient.ts)）
   - [x] google.script.run Promise ラッパ実装
   - [x] LoggingService（構造化ログ with traceId）
 - DoD

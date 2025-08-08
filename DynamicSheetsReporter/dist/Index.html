@@ -80,20 +80,80 @@
 var ClientBundle;
 /******/ (() => { // webpackBootstrap
 /******/ 	"use strict";
+/******/ 	var __webpack_modules__ = ({
+
+/***/ "./src/client/services/ApiClient.ts":
+/*!******************************************!*\
+  !*** ./src/client/services/ApiClient.ts ***!
+  \******************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ApiClient = void 0;
+function run(name, ...args) {
+    return new Promise((resolve, reject) => {
+        google.script.run
+            .withSuccessHandler((res) => resolve(res))
+            .withFailureHandler((err) => reject(err))[name](...args);
+    });
+}
+exports.ApiClient = {
+    ping() {
+        return run('ping');
+    },
+    getUserSettings() {
+        return run('getUserSettings');
+    },
+    saveUserSettings(req) {
+        return run('saveUserSettings', req);
+    },
+    generateContent(req) {
+        return run('generateContentProxy', req);
+    }
+};
+
+
+/***/ })
+
+/******/ 	});
+/************************************************************************/
+/******/ 	// The module cache
+/******/ 	var __webpack_module_cache__ = {};
+/******/ 	
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/ 		// Check if module is in cache
+/******/ 		var cachedModule = __webpack_module_cache__[moduleId];
+/******/ 		if (cachedModule !== undefined) {
+/******/ 			return cachedModule.exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = __webpack_module_cache__[moduleId] = {
+/******/ 			// no module.id needed
+/******/ 			// no module.loaded needed
+/******/ 			exports: {}
+/******/ 		};
+/******/ 	
+/******/ 		// Execute the module function
+/******/ 		__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
+/******/ 	
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/ 	
+/************************************************************************/
 var __webpack_exports__ = {};
+// This entry needs to be wrapped in an IIFE because it needs to be isolated against other modules in the chunk.
+(() => {
+var exports = __webpack_exports__;
 /*!****************************!*\
   !*** ./src/client/main.ts ***!
   \****************************/
 
-// Client bootstrap: Promise wrapper for google.script.run and simple UI wiring
-function run(funcName, ...args) {
-    return new Promise((resolve, reject) => {
-        // eslint-disable-next-line no-undef
-        google.script.run
-            .withSuccessHandler((res) => resolve(res))
-            .withFailureHandler((err) => reject(err))[funcName](...args);
-    });
-}
+// Client bootstrap and simple UI wiring
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const ApiClient_1 = __webpack_require__(/*! ./services/ApiClient */ "./src/client/services/ApiClient.ts");
 function byId(id) {
     const el = document.getElementById(id);
     if (!el)
@@ -124,7 +184,7 @@ async function init() {
     }
     // load current settings
     try {
-        const settings = await run('getUserSettings');
+        const settings = await ApiClient_1.ApiClient.getUserSettings();
         apiKeyMasked.textContent = settings.hasApiKey ? `保存済み: ${settings.apiKeyMasked}` : '未保存';
         modelSel.value = settings.model;
         localeInput.value = settings.locale || 'ja-JP';
@@ -146,7 +206,7 @@ async function init() {
             if (apiKeyInput.value && apiKeyInput.value.trim().length > 0) {
                 req.apiKeyPlain = apiKeyInput.value.trim();
             }
-            const res = await run('saveUserSettings', req);
+            const res = await ApiClient_1.ApiClient.saveUserSettings(req);
             if (res.ok) {
                 saveStatus.textContent = '保存しました';
                 saveStatus.className = 'ok';
@@ -169,6 +229,7 @@ async function init() {
     });
     if (gemBtn && gemPrompt && gemResult) {
         gemBtn.addEventListener('click', async () => {
+            var _a, _b, _c, _d, _e, _f;
             const prompt = gemPrompt.value || 'こんにちは';
             gemResult.textContent = '生成中...';
             gemResult.className = 'mono';
@@ -179,9 +240,10 @@ async function init() {
                         { role: 'user', parts: [{ text: prompt }] }
                     ]
                 };
-                const res = await run('generateContentProxy', req);
+                const res = await ApiClient_1.ApiClient.generateContent(req);
                 if (res.ok) {
-                    gemResult.textContent = res.text || '(empty)';
+                    const txt = ((_f = (_e = (_d = (_c = (_b = (_a = res.data) === null || _a === void 0 ? void 0 : _a.candidates) === null || _b === void 0 ? void 0 : _b[0]) === null || _c === void 0 ? void 0 : _c.content) === null || _d === void 0 ? void 0 : _d.parts) === null || _e === void 0 ? void 0 : _e[0]) === null || _f === void 0 ? void 0 : _f.text) || '(empty)';
+                    gemResult.textContent = txt;
                     gemResult.className = 'ok mono';
                 }
                 else {
@@ -198,7 +260,7 @@ async function init() {
     pingBtn.addEventListener('click', async () => {
         pingResult.textContent = 'ping...';
         try {
-            const res = await run('ping');
+            const res = await ApiClient_1.ApiClient.ping();
             pingResult.textContent = res;
             pingResult.className = 'ok mono';
         }
@@ -209,6 +271,8 @@ async function init() {
     });
 }
 document.addEventListener('DOMContentLoaded', init);
+
+})();
 
 ClientBundle = __webpack_exports__;
 /******/ })()
