@@ -1,4 +1,74 @@
 /******/ 	"use strict";
+/******/ 	var __webpack_modules__ = ({
+
+/***/ "./src/server/LoggingService.ts":
+/*!**************************************!*\
+  !*** ./src/server/LoggingService.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+
+// LoggingService: structured logging with trace IDs for GAS environment
+// Transpiled to .gs and executed in Apps Script.
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+function randomId_() {
+    const chars = '0123456789abcdef';
+    let id = '';
+    for (let i = 0; i < 16; i++)
+        id += chars[Math.floor(Math.random() * chars.length)];
+    return id;
+}
+function log_(severity, traceId, message, data) {
+    const entry = {
+        severity,
+        traceId,
+        message,
+        timestamp: new Date().toISOString(),
+    };
+    if (data !== undefined)
+        entry.data = data;
+    console.log(JSON.stringify(entry));
+}
+function withTrace(traceId) {
+    const id = traceId || randomId_();
+    return {
+        traceId: id,
+        info: (message, data) => log_('INFO', id, message, data),
+        error: (message, data) => log_('ERROR', id, message, data),
+    };
+}
+
+
+/***/ })
+
+/******/ 	});
+/************************************************************************/
+/******/ 	// The module cache
+/******/ 	var __webpack_module_cache__ = {};
+/******/ 	
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/ 		// Check if module is in cache
+/******/ 		var cachedModule = __webpack_module_cache__[moduleId];
+/******/ 		if (cachedModule !== undefined) {
+/******/ 			return cachedModule.exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = __webpack_module_cache__[moduleId] = {
+/******/ 			// no module.id needed
+/******/ 			// no module.loaded needed
+/******/ 			exports: {}
+/******/ 		};
+/******/ 	
+/******/ 		// Execute the module function
+/******/ 		__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
+/******/ 	
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/ 	
+/************************************************************************/
 
 /*!****************************!*\
   !*** ./src/server/Code.ts ***!
@@ -13,6 +83,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 
 
 
+const LoggingService_1 = __webpack_require__(/*! ./LoggingService */ "./src/server/LoggingService.ts");
 /* ============================================================= */
 // Constants
 const PROP_NS = 'DSR';
@@ -77,6 +148,8 @@ function saveUserSettings(req) {
 }
 // Minimal ping to verify backend reachable
 function ping() {
+    const logger = (0, LoggingService_1.withTrace)();
+    logger.info('ping');
     return 'pong';
 }
 function generateContentProxy(req) {

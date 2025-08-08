@@ -6,10 +6,10 @@
 
 - 目的: 開発環境、マニフェスト、最小構成の整備
 - タスク
-  - Node/Clasp/TypeScript/Vue 開発環境整備
-  - dist ディレクトリ出力のビルド配線確認（webpack）
-  - appsscript.json の executeAs=USER_ACCESSING, access=DOMAIN, スコープ最小化の確認
-  - 空の GAS プロジェクトに clasp push → Web アプリ最小デプロイ
+  - [x] Node/Clasp/TypeScript/Vue 開発環境整備
+  - [x] dist ディレクトリ出力のビルド配線確認（webpack）
+  - [x] appsscript.json の executeAs=USER_ACCESSING, access=DOMAIN, スコープ最小化の確認
+  - [x] 空の GAS プロジェクトに clasp push → Web アプリ最小デプロイ
 - DoD
   - デプロイ URL が発行され、index が描画される
 - 成果物
@@ -19,10 +19,10 @@
 
 - 目的: 最小 API と SPA 骨格の確立
 - タスク
-  - /src/server: main.ts, controllers/*, services/*, utils/*, common/*
-  - /src/client: AppShell, ルータ無し単一ページ、API クライアント（[`src/client/services/ApiClient.ts`](src/client/services/ApiClient.ts)）
-  - google.script.run Promise ラッパ実装
-  - LoggingService（構造化ログ with traceId）
+  - [ ] /src/server: main.ts, controllers/*, services/*, utils/*, common/*
+  - [ ] /src/client: AppShell, ルータ無し単一ページ、API クライアント（[`src/client/services/ApiClient.ts`](src/client/services/ApiClient.ts)）
+  - [x] google.script.run Promise ラッパ実装
+  - [x] LoggingService（構造化ログ with traceId）
 - DoD
   - /health 代替の簡易 API が往復し、UI でレスポンス表示
 - 成果物
