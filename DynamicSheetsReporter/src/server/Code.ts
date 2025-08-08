@@ -3,6 +3,7 @@
 // Local TypeScript build will not have GAS ambient types; define minimal shims to satisfy TS.
 
 import { GeminiModel, SaveUserSettingsRequest, SaveUserSettingsResult, UserSettings } from '../shared/types';
+import { withTrace } from './LoggingService';
 
 /* ===== Minimal GAS type/value shims for local TS compile ===== */
 // These shims are erased at runtime in Apps Script because actual globals exist there.
@@ -98,6 +99,8 @@ export function saveUserSettings(req: SaveUserSettingsRequest): SaveUserSettings
 
 // Minimal ping to verify backend reachable
 export function ping(): string {
+  const logger = withTrace();
+  logger.info('ping');
   return 'pong';
 }
 
