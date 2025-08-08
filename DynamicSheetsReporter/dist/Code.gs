@@ -74,7 +74,7 @@ function withTrace(traceId) {
   !*** ./src/server/Code.ts ***!
   \****************************/
 
-// GAS entry points and user settings handlers
+// Core GAS entry points and user settings handlers
 // Note: Transpiled to .gs and executed in Apps Script environment (V8)
 // Local TypeScript build will not have GAS ambient types; define minimal shims to satisfy TS.
 Object.defineProperty(exports, "__esModule", ({ value: true }));
